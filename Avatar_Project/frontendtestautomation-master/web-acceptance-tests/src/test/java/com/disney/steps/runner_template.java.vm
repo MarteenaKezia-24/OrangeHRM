@@ -1,0 +1,31 @@
+#macro( stringArray $array ){#foreach( $element in $array )"$element"#if( $foreach.hasNext ), #end#end}#end
+
+package com.disney.steps;
+
+import com.github.mkolisnyk.cucumber.runner.ExtendedCucumber;
+import com.github.mkolisnyk.cucumber.runner.ExtendedCucumberOptions;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import com.github.mkolisnyk.cucumber.runner.AfterSuite;
+import cucumber.api.CucumberOptions;
+import static com.disney.steps.RunnerTest.tree;
+
+@RunWith(ExtendedCucumber.class)
+@ExtendedCucumberOptions(retryCount = 1)
+@CucumberOptions(#if($glue.contains("false"))
+        features = "src/test/resources/com/disney/features",
+        tags = #stringArray($tags),
+#else
+        features = "$featureFile",
+#end
+        plugin = #stringArray($plugins),
+        glue = {"com.disney.steps","com.disney.common"})
+
+public class $className extends RunnerTest
+{
+    @BeforeClass
+    public static void setup()
+    {
+        RunnerTest.runnerName = "$className";
+    }
+}

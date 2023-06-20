@@ -1,0 +1,1 @@
+function FindProxyForURL(url, host) {if (shExpMatch(host, "*.miso.saucelabs.com") || shExpMatch(host, "*.api.testobject.com/sc/rest/v1") || shExpMatch(host, "saucelabs.com")) {return "DIRECT";}return "PROXY localhost:56123";}

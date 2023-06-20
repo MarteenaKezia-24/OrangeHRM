@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<parent>
+		<artifactId>FE-Automation</artifactId>
+		<groupId>com.disney.qualityservices.FE.Automation</groupId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>web-acceptance-tests</artifactId>
+	<properties>
+		<maven.build.timestamp.format>MMddHHmmss</maven.build.timestamp.format>
+		<frondend.automation.version>1.0-SNAPSHOT</frondend.automation.version>
+		<sequoia.version>2.2.1</sequoia.version>
+		<httpclient.version>4.5.3</httpclient.version>
+		<saucelabs.version>2.1.20</saucelabs.version>
+		<threads>1</threads>
+		<use.parallel>false</use.parallel>
+		<parallel.scheme>FEATURE</parallel.scheme>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.11.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.seleniumhq.selenium</groupId>
+			<artifactId>selenium-java</artifactId>
+			<version>3.14.0</version>
+		</dependency>
+		<dependency>
+			<groupId>io.rest-assured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>3.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.xml.bind</groupId>
+			<artifactId>jaxb-api</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.glassfish.jaxb</groupId>
+			<artifactId>jaxb-runtime</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+		<!-- Httpclient -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>${httpclient.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.mkolisnyk</groupId>
+			<artifactId>cucumber-reports</artifactId>
+			<version>1.0.6</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.testng</groupId>
+					<artifactId>testng</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+	</dependencies>
+	<!-- Parallel run -->
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					<execution>
+						<id>set variables</id>
+						<phase>validate</phase>
+						<configuration>
+							<exportAntProperties>true</exportAntProperties>
+							<target>
+								<condition property="runner" value="Parallel">
+									<contains string="${use.parallel}" substring="true" />
+								</condition>
+								<property name="runner" value="Parallel001" />
+								<property name="tags" value="" />
+								<condition property="cucumber_tags" value="~@default">
+									<equals arg1="${tags}" arg2="" />
+								</condition>
+								<property name="cucumber_tags" value="${tags}" />
+
+								<condition property="browser_tag" value="@no_edge">
+									<contains string="${browser}"
+										substring="MicrosoftEdge" />
+								</condition>
+								<condition property="browser_tag" value="@no_ie">
+									<contains string="${browser}"
+										substring="internet explorer" />
+								</condition>
+								<property name="browser_tag" value="@no_${browser}" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>fix driver access</id>
+						<phase>process-test-classes</phase>
+						<configuration>
+							<target>
+								<chmod dir="target/test-classes/com/disney/drivers"
+									includes="**/*" perm="755" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>fix shell script access</id>
+						<phase>process-test-classes</phase>
+						<configuration>
+							<target>
+								<chmod dir="src/test/resources/com/disney/scripts"
+									includes="**/*" perm="755" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.github.temyers</groupId>
+				<artifactId>cucumber-jvm-parallel-plugin</artifactId>
+				<version>5.0.0</version>
+				<executions>
+					<execution>
+						<id>generateRunners</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>generateRunners</goal>
+						</goals>
+						<configuration>
+							<!-- Mandatory -->
+							<!-- List of package names to scan for glue code. -->
+							<glue>
+								<package>${use.parallel}</package>
+							</glue>
+							<tags>
+								<tag>${cucumber_tags}</tag>
+							</tags>
+							<plugins>
+								<plugin>
+									<name>
+										${cucumber.plugin}
+									</name>
+									<outputDirectory>
+										target/site/test
+									</outputDirectory>
+								</plugin>
+							</plugins>
+							<!-- These are optional, with the default values -->
+							<!-- Where to output the generated tests -->
+							<outputDirectory>${project.build.directory}/generated-test-sources/feature-runners
+							</outputDirectory>
+							<!-- The directory, which must be in the root of the runtime classpath, 
+								containing your feature files. -->
+							<featuresDirectory>src/test/resources/com/disney/features</featuresDirectory>
+							<!-- Directory where the cucumber report files shall be written -->
+							<cucumberOutputDir>target/site</cucumberOutputDir>
+							<format>html,json</format>
+							<!-- CucumberOptions.strict property -->
+							<strict>false</strict>
+							<!-- CucumberOptions.monochrome property -->
+							<monochrome>false</monochrome>
+							<!-- Generate TestNG runners instead of JUnit ones. -->
+							<useTestNG>false</useTestNG>
+							<!-- The naming scheme to use for the generated test classes. One 
+								of 'simple' or 'feature-title' -->
+							<namingScheme>pattern</namingScheme>
+							<namingPattern>Parallel{3c}</namingPattern>
+							<!-- One of [SCENARIO, FEATURE]. SCENARIO generates one runner per 
+								scenario. FEATURE generates a runner per feature. -->
+							<parallelScheme>${parallel.scheme}</parallelScheme>
+							<customVmTemplate>src/test/java/com/disney/steps/runner_template.java.vm</customVmTemplate>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${surefire.version}</version>
+				<configuration>
+					<systemPropertyVariables>
+						<timestamp>${maven.build.timestamp}</timestamp>
+					</systemPropertyVariables>
+					<forkCount>${threads}</forkCount>
+					<reuseForks>false</reuseForks>
+					<useFile>false</useFile>
+					<includes>
+						<include>**/${runner}**</include>
+					</includes>
+					<testFailureIgnore>true</testFailureIgnore>
+					<runOrder>alphabetical</runOrder>
+				</configuration>
+				<executions>
+					<execution>
+						<id>acceptance-test</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>test</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>exec-maven-plugin</artifactId>
+				<groupId>org.codehaus.mojo</groupId>
+				<version>1.6.0</version>
+				<executions>
+					<execution>
+						<id>consolidate</id>
+						<phase>test</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>${basedir}/src/test/resources/com/disney/scripts/consolidate.sh</executable>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

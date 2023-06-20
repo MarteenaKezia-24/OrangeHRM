@@ -1,0 +1,214 @@
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.disney.qualityservices.FE.Automation</groupId>
+		<artifactId>FE-Automation</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>web-analytics-tests-with-proxy</artifactId>
+
+	<properties>
+		<maven.build.timestamp.format>MMddHHmmss</maven.build.timestamp.format>
+		<matterhorn.fronend.version>1.0-SNAPSHOT</matterhorn.fronend.version>
+		<httpclient.version>4.5.3</httpclient.version>
+		<threads>1</threads>
+		<use.parallel>false</use.parallel>
+		<parallel.scheme>FEATURE</parallel.scheme>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>com.github.mkolisnyk</groupId>
+			<artifactId>cucumber-reports</artifactId>
+			<version>1.0.6</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.testng</groupId>
+					<artifactId>testng</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.xhtmlrenderer</groupId>
+					<artifactId>flying-saucer-pdf</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Cucumber -->
+		<dependency>
+			<groupId>info.cukes</groupId>
+			<artifactId>cucumber-java</artifactId>
+			<version>${cucumber.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>info.cukes</groupId>
+			<artifactId>cucumber-spring</artifactId>
+			<version>${cucumber.version}</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>commons-logging</artifactId>
+					<groupId>commons-logging</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>info.cukes</groupId>
+			<artifactId>cucumber-junit</artifactId>
+			<version>${cucumber.version}</version>
+		</dependency>
+		<!-- Httpclient -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>${httpclient.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.lightbody.bmp</groupId>
+			<artifactId>browsermob-core</artifactId>
+			<version>2.1.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>23.0</version> <!-- Or something newer like 19.0 -->
+		</dependency>
+		<dependency>
+			<groupId>com.saucelabs</groupId>
+			<artifactId>ci-sauce</artifactId>
+			<version>1.132</version>
+		</dependency>
+	</dependencies>
+	<!-- Parallel run -->
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					<execution>
+						<id>set variables</id>
+						<phase>validate</phase>
+						<configuration>
+							<exportAntProperties>true</exportAntProperties>
+							<target>
+								<condition property="runner" value="Parallel">
+									<contains string="${use.parallel}" substring="true" />
+								</condition>
+								<property name="runner" value="Parallel01" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>fix driver access</id>
+						<phase>process-test-classes</phase>
+						<configuration>
+							<target>
+								<chmod dir="target/test-classes/com/disney"
+									includes="**/*" perm="755" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.github.temyers</groupId>
+				<artifactId>cucumber-jvm-parallel-plugin</artifactId>
+				<version>5.0.0</version>
+				<executions>
+					<execution>
+						<id>generateRunners</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>generateRunners</goal>
+						</goals>
+						<configuration>
+							<!-- Mandatory -->
+							<!-- List of package names to scan for glue code. -->
+							<glue>
+								<package>${use.parallel}</package>
+							</glue>
+							<tags>
+								<tag>${cucumber_tags}</tag>
+							</tags>
+							<plugins>
+								<plugin>
+									<name>
+										${cucumber.plugin}
+									</name>
+									<outputDirectory>
+										target/site/test
+									</outputDirectory>
+								</plugin>
+								<plugin>
+									<name>html</name>
+								</plugin>
+								<plugin>
+									<name>json</name>
+								</plugin>
+							</plugins>
+							<!-- These are optional, with the default values -->
+							<!-- Where to output the generated tests -->
+							<outputDirectory>${project.build.directory}/generated-test-sources/feature-runners
+							</outputDirectory>
+							<!-- The directory, which must be in the root of the runtime classpath, 
+								containing your feature files. -->
+							<featuresDirectory>src/test/resources/com/disney/features</featuresDirectory>
+							<!-- Directory where the cucumber report files shall be written -->
+							<cucumberOutputDir>target/site</cucumberOutputDir>
+							<!-- CucumberOptions.strict property -->
+							<strict>false</strict>
+							<!-- CucumberOptions.monochrome property -->
+							<monochrome>false</monochrome>
+							<!-- Generate TestNG runners instead of JUnit ones. -->
+							<useTestNG>false</useTestNG>
+							<!-- The naming scheme to use for the generated test classes. One 
+								of 'simple' or 'feature-title' -->
+							<namingScheme>simple</namingScheme>
+							<!-- One of [SCENARIO, FEATURE]. SCENARIO generates one runner per 
+								scenario. FEATURE generates a runner per feature. -->
+							<parallelScheme>${parallel.scheme}</parallelScheme>
+							<customVmTemplate>src/test/java/com/disney/steps/runner_template.java.vm</customVmTemplate>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${surefire.version}</version>
+				<configuration>
+					<systemPropertyVariables>
+						<timestamp>${maven.build.timestamp}</timestamp>
+					</systemPropertyVariables>
+					<forkCount>${threads}</forkCount>
+					<reuseForks>false</reuseForks>
+					<useFile>false</useFile>
+					<includes>
+						<include>**/${runner}**</include>
+					</includes>
+					<testFailureIgnore>true</testFailureIgnore>
+					<runOrder>alphabetical</runOrder>
+				</configuration>
+				<executions>
+					<execution>
+						<id>acceptance-test</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>test</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
+
